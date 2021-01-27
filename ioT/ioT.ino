@@ -9,7 +9,7 @@
 
 fauxmoESP fauxmo;
 
-char* topic = "channels/1279939/publish/HSF04ETFRM8AV3FH"; // Arduino Test 3
+char* topic = THINGSPEAK_API; 
 char* server = "mqtt.thingspeak.com";
 String payload;
 
