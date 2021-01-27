@@ -11,13 +11,10 @@ fauxmoESP fauxmo;
 
 char* topic = "channels/1279939/publish/HSF04ETFRM8AV3FH"; // Arduino Test 3
 char* server = "mqtt.thingspeak.com";
+String payload;
 
 WiFiClient wifiClient;
 PubSubClient client(server, 1883, wifiClient);
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  // handle message arrived
-}
 
 // -----------------------------------------------------------------------------
 
@@ -46,6 +43,8 @@ void wifiSetup() {
         delay(100);
     }
     Serial.println();
+
+    client.setCallback(mqttCallback);
 
     // Connected!
     Serial.printf("[WIFI] STATION Mode, SSID: %s, IP address: %s\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
@@ -144,32 +143,19 @@ void publishMQTT() {
   float humid = 70.00;
   float temp = 22.00;
   
-  String  payload="field1=";
+  payload="field1=";
           payload+=String(temp);
           payload+="&field2=";
           payload+=String(humid);
-  
-  if (client.connected()){
-    Serial.print("Sending payload: ");
-    Serial.println(payload);
     
-    if (client.publish(topic, (char*) payload.c_str())) {
-      Serial.println("Publish ok");
-      Serial.println("Now we have to disconnect the client!");
-      
-      client.disconnect();
-    }
-    else {
-      Serial.println("Publish failed");
-    }
-  }else{
-    Serial.println("Client is not connected!");
+  if (client.publish(topic, (char*) payload.c_str())) {
+    Serial.println("Perfect! Data have been published to the thingspeak.com!");
   }
 
 }
 
-void reconnect()
-{
+void handleMqttConnection(void) {
+          
   char clientID[] = "00000000"; // null terminated 8 chars long
   
   // Loop until reconnected.
@@ -186,6 +172,9 @@ void reconnect()
     if (client.connect(clientID)) {
       Serial.print("Connected with Client ID: ");
       Serial.print(String(clientID));
+      publishMQTT();
+      client.subscribe(payload.c_str());
+      
     } else {
       Serial.print("failed, rc=");
       // Print to know why the connection failed.
@@ -195,7 +184,42 @@ void reconnect()
       delay(1000);
     }
   }
+  client.loop();
 }
+
+
+void mqttCallback(char * topicChar, byte * payloadBytes, unsigned int length) {
+    char payloadChar[100];
+    int i;
+    for (i = 0; i < length; i++) {
+        payloadChar[i] = payloadBytes[i];
+    }
+    payloadChar[i] = '\0';
+
+    String topic = String(topicChar);
+    String payload = String(payloadChar);
+
+    Serial.print("Message arrived [");
+    Serial.print(topic);
+    Serial.print("] (");
+    Serial.print(length);
+    Serial.print(" bytes) :");
+    Serial.print(payload);
+    Serial.println();
+
+    if (topic == payload) {
+        Serial.print("Processing ");
+        Serial.println(payload);
+
+        if ((char) payload[0] == '0') {
+            // setSwitchLow(false);
+            Serial.print("SET THE STATUS TO OFF");
+        } else {
+            Serial.print("SET THE STATUS TO ON");
+        }
+    } 
+}
+
 
 
 void loop() {
@@ -216,7 +240,5 @@ void loop() {
     // you can instruct the library to report the new state to Alexa on next request:
     // fauxmo.setState(ID_SENSOR, true, 255);
     
-    if (!client.connected()) {
-      reconnect();
-    }
+    handleMqttConnection();
 }
