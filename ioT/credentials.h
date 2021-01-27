@@ -1,0 +1,2 @@
+#define WIFI_SSID "TIM-27462659"
+#define WIFI_PASS "3395383338"
